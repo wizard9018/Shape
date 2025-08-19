@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Concentration Challenge</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg1:#0f172a; --bg2:#1e293b; --accent:#6366f1; --accent2:#22d3ee;
+    --card:rgba(255,255,255,.08); --border:rgba(255,255,255,.15);
+    --text:#e5e7eb; --muted:#a1a1aa; --cell-blue:#3b82f6; --cell-green:#22c55e;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+       color:var(--text);background:linear-gradient(120deg,var(--bg1),var(--bg2));
+       background-size:200% 200%;animation:bgShift 18s ease infinite;}
+  @keyframes bgShift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+  .container{max-width:1100px;margin:0 auto;padding:20px}
+  h1{font-weight:800;margin:8px 0 16px}
+  .glass{background:var(--card);border:1px solid var(--border);border-radius:16px;
+         box-shadow:0 10px 30px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.05);
+         backdrop-filter:blur(10px)}
+
+  /* TOP BAR */
+  #topbar{position:sticky;top:0;z-index:10;display:flex;flex-direction:column;gap:10px;align-items:center;
+          padding:12px 16px;margin-bottom:16px;background:rgba(15,23,42,.6)}
+  #idRow{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:center}
+  #ctrlRow{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:center}
+  #scoreBoard{font-size:1rem;padding:6px 10px;border-radius:10px;background:rgba(255,255,255,.06);border:1px solid var(--border)}
+  input,select{padding:8px 10px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,.06);color:var(--text)}
+  #timer{font-weight:700;padding:6px 10px;border-radius:999px;min-width:160px;text-align:center;
+         background:linear-gradient(90deg,var(--accent),var(--accent2));color:#0b1020;display:none}
+  button{padding:10px 16px;border-radius:12px;border:1px solid var(--border);
+         background:linear-gradient(180deg,rgba(255,255,255,.14),rgba(255,255,255,.06));color:var(--text);
+         font-weight:600;cursor:pointer;box-shadow:0 8px 20px rgba(0,0,0,.25);transition:transform .06s,box-shadow .2s}
+  button:hover{box-shadow:0 12px 26px rgba(0,0,0,.35)}
+  button:active{transform:translateY(1px) scale(.98)}
+  .btn-primary{background:linear-gradient(90deg,var(--accent),var(--accent2));color:#081226;border:none}
+
+  .panels{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;align-items:flex-start}
+  .panel{padding:14px}
+  .title{margin:8px 0 12px;font-weight:700}
+  .grid,.resultGrid{display:grid;grid-template-columns:repeat(10,32px);grid-template-rows:repeat(10,32px);gap:0;
+                    border-radius:12px;overflow:hidden;border:1px solid var(--border);
+                    box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 8px 18px rgba(0,0,0,.25)}
+  .cell{width:32px;height:32px;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.02);cursor:pointer;
+        transition:background-color .15s,box-shadow .15s}
+  .grid .cell:hover{box-shadow:inset 0 0 0 2px rgba(255,255,255,.15)}
+  .blue{background:linear-gradient(180deg,var(--cell-blue),#1e3a8a)}
+  .green{background:linear-gradient(180deg,var(--cell-green),#065f46)}
+  .white{background:rgba(255,255,255,.02)}
+
+  #quiz,#results,#finish,#billboard{margin-top:16px}
+  #quizTimer{font-weight:700;color:var(--muted)}
+  table{width:100%;max-width:900px}
+  thead th{position:sticky;top:0;background:rgba(255,255,255,.08);border-bottom:1px solid var(--border);padding:10px}
+  tbody td{padding:10px;border-bottom:1px solid var(--border)}
+  tbody tr:nth-child(odd){background:rgba(255,255,255,.03)}
+  .pill{display:inline-block;padding:6px 10px;border-radius:999px;font-weight:700}
+  .pill.bad{background:rgba(239,68,68,.2);color:#fecaca;border:1px solid rgba(239,68,68,.35)}
+
+  /* Roulette */
+  #roulette{display:none;text-align:center}
+  .roulette-wrap{position:relative;width:260px;height:260px;margin:0 auto}
+  #wheel{width:100%;height:100%;border-radius:50%;border:6px solid rgba(255,255,255,.2);
+         background:conic-gradient(#22c55e 0 90deg,#f59e0b 90deg 180deg,#ef4444 180deg 270deg,#3b82f6 270deg 360deg);
+         display:grid;place-items:center;transition:transform 5.5s cubic-bezier(.06,.9,.08,1);
+         box-shadow:inset 0 2px 8px rgba(0,0,0,.4),0 10px 30px rgba(0,0,0,.35)}
+  .wheel-labels{position:absolute;inset:0;pointer-events:none}
+  .wheel-labels span{position:absolute;left:50%;top:50%;transform-origin:0 0;font-weight:800;text-shadow:0 2px 6px rgba(0,0,0,.5)}
+  .l0{transform:rotate(45deg) translate(60px) rotate(-45deg)}
+  .l1{transform:rotate(135deg) translate(60px) rotate(-135deg)}
+  .l2{transform:rotate(225deg) translate(60px) rotate(-225deg)}
+  .l5{transform:rotate(315deg) translate(60px) rotate(-315deg)}
+  #pointer{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:0;height:0;
+           border-left:12px solid transparent;border-right:12px solid transparent;border-bottom:18px solid #fff;
+           filter:drop-shadow(0 3px 6px rgba(0,0,0,.35));z-index:2}
+
+  /* Billboard tabs */
+  .tabs{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+  .tab{padding:6px 10px;border:1px solid var(--border);border-radius:999px;background:rgba(255,255,255,.06);cursor:pointer}
+  .tab.active{background:linear-gradient(90deg,var(--accent),var(--accent2));color:#081226;border:none}
+  #level{background:linear-gradient(90deg,var(--accent),var(--accent2));color:#081226;border:none;font-weight:700;outline:none}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="headerRow" style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+    <h1>Concentration Challenge</h1>
+    <button id="returnBtn" class="btn-primary" style="display:none">Return</button>
+  </div>
+
+  <div id="topbar" class="glass">
+    <div id="idRow">
+      <label>Player: <input id="playerName" type="text" placeholder="Your name"></label>
+      <label>School: <input id="playerSchool" type="text" placeholder="Your school"></label>
+      <div id="scoreBoard">Score: 0 / 10 &nbsp;|&nbsp; Wrong: 0 &nbsp;|&nbsp; Coins: 0</div>
+    </div>
+    <div id="ctrlRow">
+      <label for="level">Level:</label>
+      <select id="level">
+        <option value="0" selected>Level 0 (5-10 tiles)</option>
+        <option value="1">Level 1 (10-15 tiles)</option>
+        <option value="2">Level 2 (15-20 tiles)</option>
+        <option value="3">Level 3 (20-25 tiles)</option>
+        <option value="4">Level 4 (two shapes, each 5-10)</option>
+        <option value="5">Level 5 (two shapes, each 10-15)</option>
+        <option value="6">Level 6 (two shapes, each 15-20)</option>
+      </select>
+      <span id="levelLock" class="muted" style="display:none">(locked during game)</span>
+      <button id="startBtn" class="btn-primary">Start</button>
+      <button id="submitBtn" style="display:none">Submit</button>
+      <div id="timer"></div>
+    </div>
+  </div>
+
+  <div class="panels">
+    <div id="grid" class="glass panel grid" style="display:none"></div>
+
+    <div id="quiz" class="glass panel" style="display:none;min-width:360px">
+      <h3 class="title">Quick Check</h3>
+      <div id="quizQ" style="margin-bottom:6px;font-size:1.25rem;font-weight:700"></div>
+      <div style="display:flex;gap:8px;justify-content:center;align-items:center">
+        <input id="quizInput" type="number" inputmode="numeric" placeholder="Answer">
+        <button id="quizBtn" class="btn-primary">Check</button>
+      </div>
+      <div id="quizMsg" class="muted" style="margin-top:6px"></div>
+      <div id="quizTimer" class="muted"></div>
+    </div>
+
+    <div id="recallGrid" class="glass panel grid" style="display:none"></div>
+  </div>
+
+  <div id="results" class="glass panel" style="display:none">
+    <div class="panels">
+      <div class="gridContainer">
+        <h3 class="title">Your Selection</h3>
+        <div id="userGrid" class="resultGrid"></div>
+      </div>
+      <div class="gridContainer">
+        <h3 class="title">Correct Pattern</h3>
+        <div id="answerGrid" class="resultGrid"></div>
+      </div>
+    </div>
+
+    <div id="roulette" class="panel">
+      <h3 class="title">Roulette Reward</h3>
+      <div class="roulette-wrap">
+        <div id="pointer"></div>
+        <div id="wheel"><div class="wheel-labels">
+          <span class="l0">0</span><span class="l1">1</span><span class="l2">2</span><span class="l5">5</span>
+        </div></div>
+      </div>
+      <div id="rouletteResult" class="muted"></div>
+      <button id="spinBtn" class="btn-primary">Spin</button>
+    </div>
+
+    <div id="exerciseRecall" style="display:none;margin-top:10px;text-align:center">
+      <p id="exerciseRecallText"><span class="pill bad">Break</span> Do 10 squats before continuing. Then click I am done.</p>
+      <button id="exerciseRecallDoneBtn">I am done</button>
+    </div>
+
+    <div style="width:100%;margin-top:10px;text-align:center">
+      <button id="nextBtn" class="btn-primary" style="display:none">Next Round</button>
+    </div>
+  </div>
+
+  <div id="finish" class="glass panel" style="display:none;margin-top:20px;text-align:center">
+    <h2>Finished: 10 Correct Rounds!</h2>
+    <p id="finalTimeText"></p>
+    <button id="playAgainBtn" class="btn-primary">Play Again</button>
+  </div>
+
+  <div id="billboard" class="glass panel">
+    <h2 class="title">Billboard by Level</h2>
+    <p class="muted">Sorted by Wrong (asc), then Time (asc). Stored locally.</p>
+    <div id="bbTabs" class="tabs"></div>
+    <table>
+      <thead><tr><th>#</th><th>Name</th><th>School</th><th>Level</th><th>Right</th><th>Wrong</th><th>Total Time</th><th>Date</th></tr></thead>
+      <tbody id="billboardBody"></tbody>
+    </table>
+  </div>
+
+  <details id="testPanel" class="glass" style="margin-top:16px; padding:12px"><summary><strong>Developer Tests</strong> (click to expand)</summary>
+    <pre id="testOutput" style="white-space:pre-wrap"></pre>
+  </details>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  function key(r,c){ return r + "_" + c; }
+  function fmtTime(s){ var m=Math.floor(s/60), sec=Math.round(s%60); return m + ":" + (sec<10 ? "0"+sec : sec); }
+
+  var size = 10;
+  var pattern = [], userSel = [];
+  var correctCount = 0, wrongCount = 0, totalCoins = 0;
+  var recallStart = 0, totalTime = 0;
+  var timerInterval = null, gameActive = false;
+
+  var quizAnswer = 0, quizTimerInterval = null, quizTimeLeft = 20;
+
+  var wheelRotation = 0, spinInProgress = false;
+
+  // Level config per your rules
+  var levels = {
+    0:{shapes:1,min:5,max:10},
+    1:{shapes:1,min:10,max:15},
+    2:{shapes:1,min:15,max:20},
+    3:{shapes:1,min:20,max:25}, // one shape, 20-25
+    4:{shapes:2,min:5,max:10},   // two shapes, each 5-10
+    5:{shapes:2,min:10,max:15},  // two shapes, each 10-15
+    6:{shapes:2,min:15,max:20}   // two shapes, each 15-20
+  };
+
+  // ---------- DOM refs ----------
+  var gridElem = document.getElementById("grid");
+  var recallElem = document.getElementById("recallGrid");
+  var userGrid = document.getElementById("userGrid");
+  var answerGrid = document.getElementById("answerGrid");
+  var timerElem = document.getElementById("timer");
+  var scoreBoard = document.getElementById("scoreBoard");
+  var startBtn = document.getElementById("startBtn");
+  var submitBtn = document.getElementById("submitBtn");
+  var returnBtn = document.getElementById("returnBtn");
+  var resultsDiv = document.getElementById("results");
+  var finishDiv = document.getElementById("finish");
+  var nextBtn = document.getElementById("nextBtn");
+  var playAgainBtn = document.getElementById("playAgainBtn");
+  var finalTimeText = document.getElementById("finalTimeText");
+  var levelSelect = document.getElementById("level");
+  var levelLock = document.getElementById("levelLock");
+  var playerNameInput = document.getElementById("playerName");
+  var playerSchoolInput = document.getElementById("playerSchool");
+  var billboardBody = document.getElementById("billboardBody");
+  var bbTabs = document.getElementById("bbTabs");
+  var testOutput = document.getElementById("testOutput");
+
+  var quizDiv = document.getElementById("quiz");
+  var quizQ = document.getElementById("quizQ");
+  var quizInput = document.getElementById("quizInput");
+  var quizBtn = document.getElementById("quizBtn");
+  var quizMsg = document.getElementById("quizMsg");
+  var quizTimerLabel = document.getElementById("quizTimer");
+
+  var exerciseRecallDiv = document.getElementById("exerciseRecall");
+  var exerciseRecallText = document.getElementById("exerciseRecallText");
+  var exerciseRecallDoneBtn = document.getElementById("exerciseRecallDoneBtn");
+
+  var rouletteDiv = document.getElementById("roulette");
+  var wheel = document.getElementById("wheel");
+  var spinBtn = document.getElementById("spinBtn");
+  var rouletteResult = document.getElementById("rouletteResult");
+
+  // ---------- Helpers ----------
+  function updateScoreBoard(){
+    scoreBoard.innerHTML = "Score: " + correctCount + " / 10 &nbsp;|&nbsp; Wrong: " + wrongCount + " &nbsp;|&nbsp; Coins: " + totalCoins;
+  }
+
+  var BB_KEY = "memoryGridBillboardV4"; // includes school
+  var BB_SEEDED_KEY = 'memoryGridBillboardSeededV2'; // V2 seeds exactly 3 per level
+
+  function lsLoadRaw(key){ try{ return JSON.parse(localStorage.getItem(key)||"[]"); }catch(e){ return []; } }
+  function lsSaveRaw(key,x){ localStorage.setItem(key, JSON.stringify(x)); }
+  function lsLoad(){ return lsLoadRaw(BB_KEY); }
+  function lsSave(x){ lsSaveRaw(BB_KEY, x); }
+
+  function currentLevelKey(){
+    var v = levelSelect && levelSelect.value; var m = String(v==null?"":v).match(/\d+/); var k = m?parseInt(m[0],10):0; if(!(k in levels)) k=0; return k;
+  }
+
+  function renderTabs(active){
+    var levelsList = ["all",0,1,2,3,4,5,6];
+    bbTabs.innerHTML = "";
+    levelsList.forEach(function(k){
+      var b=document.createElement("button"); b.className="tab" + (String(k)===String(active)?" active":"");
+      b.textContent = (k==="all"?"All":("L"+k));
+      b.addEventListener("click", function(){ renderBillboard(k); renderTabs(k); });
+      bbTabs.appendChild(b);
+    });
+  }
+
+  function renderBillboard(levelFilter){
+    var entries = lsLoad();
+    var filtered = entries.filter(function(e){ return levelFilter==="all" || e.level===levelFilter; });
+    filtered.sort(function(a,b){ return (a.wrong-b.wrong) || (a.time-b.time); });
+    billboardBody.innerHTML = "";
+    filtered.slice(0,50).forEach(function(e,idx){
+      var tr=document.createElement("tr");
+      var date=new Date(e.date||Date.now()).toLocaleDateString();
+      tr.innerHTML = "<td>"+(idx+1)+"</td>"+
+                     "<td>"+(e.name||"")+"</td>"+
+                     "<td>"+(e.school||"-")+"</td>"+
+                     "<td>"+(e.level==null?"-":"L"+e.level)+"</td>"+
+                     "<td>"+(e.right==null?"-":e.right)+"</td>"+
+                     "<td>"+e.wrong+"</td>"+
+                     "<td>"+fmtTime(e.time)+"</td>"+
+                     "<td>"+date+"</td>";
+      billboardBody.appendChild(tr);
+    });
+  }
+
+  function saveScore(name, school, wrong, right, time, coins, level){
+    var arr = lsLoad();
+    arr.push({name:name, school:school, wrong:wrong, right:right, time:time, coins:coins, level:level, date:new Date().toISOString()});
+    lsSave(arr);
+    var active = document.querySelector(".tab.active");
+    var k = active ? (active.textContent==="All"?"all":parseInt(active.textContent.slice(1),10)) : "all";
+    renderBillboard(k);
+  }
+
+  function blockedWithNeighbors(cells){
+    var dirs = [{r:1,c:0},{r:-1,c:0},{r:0,c:1},{r:0,c:-1}];
+    var set = new Set();
+    for(var i=0;i<cells.length;i++){
+      var p = cells[i];
+      set.add(key(p.r,p.c));
+      for(var d=0;d<dirs.length;d++){
+        var nr=p.r+dirs[d].r, nc=p.c+dirs[d].c;
+        if(nr>=0&&nr<size&&nc>=0&&nc<size) set.add(key(nr,nc));
+      }
+    }
+    return set;
+  }
+
+  function parseLevelValue(v){
+    var m = String(v==null?"":v).match(/\d+/);
+    return m ? parseInt(m[0],10) : NaN;
+  }
+  function getLevelConfig(raw){
+    var key = parseLevelValue(raw);
+    if(!Number.isInteger(key) || !(key in levels)){ key = 0; }
+    return {key:key, cfg:levels[key]};
+  }
+
+  function generateConnectedShape(minTiles, maxTiles, blocked){
+    var total = Math.floor(Math.random()*(maxTiles-minTiles+1)) + minTiles;
+    var dirs = [{r:1,c:0},{r:-1,c:0},{r:0,c:1},{r:0,c:-1}];
+    var centerR = Math.floor(size/2), centerC = Math.floor(size/2);
+    function d2(r,c){ var dr=r-centerR, dc=c-centerC; return dr*dr + dc*dc; }
+    function pickSeed(){
+      var rad=3, cands=[];
+      for(var r=Math.max(0,centerR-rad); r<=Math.min(size-1,centerR+rad); r++){
+        for(var c=Math.max(0,centerC-rad); c<=Math.min(size-1,centerC+rad); c++){
+          if(!blocked.has(key(r,c))) cands.push({r:r,c:c});
+        }
+      }
+      if(!cands.length){
+        for(var r2=0;r2<size;r2++){ for(var c2=0;c2<size;c2++){ if(!blocked.has(key(r2,c2))) cands.push({r:r2,c:c2}); } }
+      }
+      cands.sort(function(a,b){ return d2(a.r,a.c) - d2(b.r,b.c); });
+      return cands[0];
+    }
+    function pickWeighted(cands){
+      var weights = []; var sum=0;
+      for(var i=0;i<cands.length;i++){ var w=1/(1+d2(cands[i].r,cands[i].c)); weights.push(w); sum+=w; }
+      var r = Math.random()*sum;
+      for(var i2=0;i2<cands.length;i2++){ r -= weights[i2]; if(r<=0) return cands[i2]; }
+      return cands[cands.length-1];
+    }
+    var attempts=0;
+    while(attempts<200){
+      attempts++;
+      var shape=[]; var seed=pickSeed(); if(!seed) break; shape.push(seed);
+      function inShape(rr,cc){ for(var i=0;i<shape.length;i++){ if(shape[i].r===rr&&shape[i].c===cc) return true; } return false; }
+      while(shape.length<total){
+        var cands=[];
+        for(var s=0;s<shape.length;s++){
+          var p=shape[s];
+          for(var d=0; d<dirs.length; d++){
+            var nr=p.r+dirs[d].r, nc=p.c+dirs[d].c;
+            if(nr>=0&&nr<size&&nc>=0&&nc<size && !inShape(nr,nc) && !blocked.has(key(nr,nc))){
+              cands.push({r:nr,c:nc});
+            }
+          }
+        }
+        if(!cands.length) break;
+        shape.push(pickWeighted(cands));
+      }
+      if(shape.length>=Math.min(total,3)) return shape;
+    }
+    // Fallback: pick a single free cell so the round can still proceed
+    var free=[];
+    for(var rr=0; rr<size; rr++){
+      for(var cc=0; cc<size; cc++){
+        if(!blocked.has(key(rr,cc))) free.push({r:rr,c:cc});
+      }
+    }
+    return free.length ? [free[Math.floor(Math.random()*free.length)]] : [];
+  }
+  
+  function buildGrid(elem, fillPattern){
+    elem.innerHTML = "";
+    for(var r=0;r<size;r++){
+      for(var c=0;c<size;c++){
+        var div=document.createElement("div"); div.className="cell white";
+        if(fillPattern){
+          for(var i=0;i<pattern.length;i++){ if(pattern[i].r===r && pattern[i].c===c){ div.classList.replace("white","blue"); break; } }
+        }
+        elem.appendChild(div);
+      }
+    }
+  }
+
+  function buildRecallGrid(){
+    recallElem.innerHTML=""; userSel=[];
+    for(var r=0;r<size;r++){
+      for(var c=0;c<size;c++){
+        (function(rr,cc){
+          var div=document.createElement("div"); div.className="cell white";
+          div.addEventListener("click", function(){
+            var k=key(rr,cc);
+            if(div.classList.contains("green")){
+              div.classList.replace("green","white");
+              var next=[]; for(var i=0;i<userSel.length;i++){ if(userSel[i]!==k) next.push(userSel[i]); } userSel=next;
+            }else{
+              div.classList.replace("white","green"); userSel.push(k);
+            }
+          });
+          recallElem.appendChild(div);
+        })(r,c);
+      }
+    }
+  }
+
+  function buildResultGrid(elem, coords, color){
+    elem.innerHTML="";
+    for(var r=0;r<size;r++){
+      for(var c=0;c<size;c++){
+        var found=false;
+        for(var i=0;i<coords.length;i++){ if(coords[i].r===r&&coords[i].c===c){ found=true; break; } }
+        var div=document.createElement("div"); div.classList.add("cell"); div.classList.add(found?color:"white");
+        elem.appendChild(div);
+      }
+    }
+  }
+
+  function resetToStart(fullReset){
+    if(fullReset===undefined) fullReset=true;
+    if(timerInterval){ clearInterval(timerInterval); timerInterval=null; }
+    if(quizTimerInterval){ clearInterval(quizTimerInterval); quizTimerInterval=null; }
+    timerElem.textContent=""; timerElem.style.display='none';
+    gridElem.style.display="none"; recallElem.style.display="none"; resultsDiv.style.display="none"; finishDiv.style.display="none"; quizDiv.style.display="none";
+    submitBtn.style.display="none"; returnBtn.style.display="none"; startBtn.style.display="inline-block";
+    gameActive=false; levelSelect.disabled=false; levelLock.style.display="none";
+    if(fullReset){ correctCount=0; wrongCount=0; totalCoins=0; totalTime=0; updateScoreBoard(); }
+  }
+
+  function startRound(){
+    gameActive=true; levelSelect.disabled=true; levelLock.style.display="inline";
+    pattern=[];
+
+    var sel = getLevelConfig(levelSelect.value);
+    if(!sel || !sel.cfg){ sel = {key:0,cfg:levels[0]}; }
+    if(String(sel.key) !== String(levelSelect.value)) levelSelect.value = String(sel.key);
+    var cfg = sel.cfg;
+
+    var blocked=new Set();
+    for(var s=0;s<cfg.shapes;s++){
+      var shape=generateConnectedShape(cfg.min,cfg.max,blocked);
+      pattern=pattern.concat(shape);
+      var extra=blockedWithNeighbors(shape);
+      extra.forEach(function(k){ blocked.add(k); });
+    }
+    buildGrid(gridElem,true);
+    gridElem.style.display="grid";
+    submitBtn.style.display="none";
+    returnBtn.style.display="inline-block";
+
+    var t=30; timerElem.textContent="Time left: "+t+"s"; timerElem.style.display='inline-block';
+    if(timerInterval) clearInterval(timerInterval);
+    timerInterval=setInterval(function(){
+      t--; timerElem.textContent="Time left: "+t+"s";
+      if(t<=0){
+        clearInterval(timerInterval); timerInterval=null; timerElem.textContent=""; timerElem.style.display='none';
+        gridElem.style.display="none"; startQuiz();
+      }
+    },1000);
+  }
+
+  function stopQuizTimer(){ if(quizTimerInterval){ clearInterval(quizTimerInterval); quizTimerInterval=null; } }
+  function startQuiz(){
+    stopQuizTimer(); quizTimeLeft=20;
+    quizTimerLabel.textContent="Quiz time left: "+quizTimeLeft+"s";
+
+    var a = Math.floor(Math.random()*90)+10;
+    var b = Math.floor(Math.random()*90)+10;
+    var useAdd = Math.random() < 0.5;
+    var sym, qA, qB;
+
+    if (useAdd){
+      sym = "+";
+      qA = a; qB = b;
+      quizAnswer = a + b;
+    } else {
+      if (b > a){ var t=a; a=b; b=t; }
+      sym = "-";
+      qA = a; qB = b;
+      quizAnswer = a - b;
+    }
+
+    quizQ.textContent = "What is " + qA + " " + sym + " " + qB + "?";
+    quizInput.value=""; quizMsg.textContent="";
+    quizDiv.style.display="block"; quizInput.disabled=false; quizBtn.disabled=false; quizInput.focus();
+
+    quizTimerInterval=setInterval(function(){
+      quizTimeLeft--; quizTimerLabel.textContent="Quiz time left: "+quizTimeLeft+"s";
+      if(quizTimeLeft<=0){ stopQuizTimer(); quizMsg.textContent="Time's up — try another one."; setTimeout(startQuiz,500); }
+    },1000);
+  }
+  function proceedToRecall(){ stopQuizTimer(); quizDiv.style.display='none'; recallElem.style.display='grid'; submitBtn.style.display='inline-block'; buildRecallGrid(); recallStart=Date.now(); }
+  function checkQuiz(){ var v=parseInt((quizInput.value||'').trim(),10); if(!isFinite(v)){ quizMsg.textContent='Please enter a number.'; return; } if(v===quizAnswer) proceedToRecall(); else { quizMsg.textContent='Incorrect — try another one.'; setTimeout(startQuiz,500);} }
+
+  function spinRoulette(){
+    if(spinInProgress) return; spinInProgress=true; spinBtn.disabled=true; rouletteResult.textContent="Spinning...";
+    wheel.style.transition="transform 5.5s cubic-bezier(0.06,0.9,0.08,1)";
+    var target=Math.random()*360; var spins=5+Math.floor(Math.random()*4); var finalRotation=wheelRotation+(spins*360)+target-(wheelRotation%360);
+    wheel.style.transform="rotate("+finalRotation+"deg)"; wheelRotation=finalRotation;
+    var onEnd=function(){ wheel.removeEventListener("transitionend",onEnd); var a=((wheelRotation%360)+360)%360; var base=((90 - a + 360)%360);
+      var prize=0; if(base>=90&&base<180) prize=1; else if(base>=180&&base<270) prize=2; else if(base>=270&&base<360) prize=5;
+      rouletteResult.textContent="You earned "+prize+" coin"+(prize===1?"":"s")+"!"; totalCoins+=prize; updateScoreBoard(); spinInProgress=false; nextBtn.style.display="inline-block"; };
+    wheel.addEventListener("transitionend", onEnd, {once:true});
+  }
+
+  function onSubmit(){
+    var correct = (function(){ if(userSel.length!==pattern.length) return false; for(var i=0;i<pattern.length;i++){ if(userSel.indexOf(key(pattern[i].r,pattern[i].c))===-1) return false; } return true; })();
+    recallElem.style.display="none"; submitBtn.style.display="none"; returnBtn.style.display="none"; resultsDiv.style.display="block";
+    var selObjs=[]; for(var i=0;i<userSel.length;i++){ var parts=userSel[i].split("_"); selObjs.push({r:+parts[0], c:+parts[1]}); }
+    buildResultGrid(userGrid, selObjs, "green"); buildResultGrid(answerGrid, pattern, "blue");
+    if(correct){ correctCount++; totalTime += (Date.now()-recallStart)/1000; updateScoreBoard(); exerciseRecallDiv.style.display="none"; nextBtn.style.display="none"; rouletteDiv.style.display="block"; spinBtn.disabled=false; rouletteResult.textContent="Tap Spin to earn coins!"; }
+    else { wrongCount++; updateScoreBoard(); rouletteDiv.style.display="none"; nextBtn.style.display="none"; var opts=["Do 10 squats.","Hold a plank for 20 seconds.","Do 15 jumping jacks.","Do 10 lunges (each leg).","Do a wall sit for 20 seconds."]; var msg=opts[Math.floor(Math.random()*opts.length)]; exerciseRecallText.innerHTML="<span class=\"pill bad\">Break</span> "+msg+" Then click I am done."; exerciseRecallDiv.style.display="block"; }
+  }
+
+  function maybeFinish(){
+    if(correctCount>=10){
+      resultsDiv.style.display="none"; finishDiv.style.display="block";
+      finalTimeText.textContent="Your final score -> Wrong: "+wrongCount+" | Total time: "+fmtTime(totalTime)+" | Coins: "+totalCoins;
+      var name=(playerNameInput.value||"Player").slice(0,24);
+      var school=(playerSchoolInput.value||"-").slice(0,48);
+      var lvl = currentLevelKey();
+      saveScore(name, school, wrongCount, correctCount, totalTime, totalCoins, lvl);
+      gameActive=false; levelSelect.disabled=false; levelLock.style.display="none";
+    }
+  }
+
+  function nextRound(){ rouletteDiv.style.display="none"; exerciseRecallDiv.style.display="none"; spinBtn.disabled=false; rouletteResult.textContent=""; resultsDiv.style.display="none"; if(correctCount>=10){ maybeFinish(); } else { startRound(); } }
+
+  function renderSeedIfNeeded(){
+    if(localStorage.getItem(BB_SEEDED_KEY)) return;
+    var PRESET_SCHOOLS = [
+      "Lord Byng Secondary","Kitsilano Secondary","University Hill Secondary","Eric Hamber Secondary",
+      "Magee Secondary","Prince of Wales Secondary","Killarney Secondary","Gladstone Secondary",
+      "Britannia Secondary","Sir Winston Churchill Secondary","David Thompson Secondary","Point Grey Secondary",
+      "John Oliver Secondary","Vancouver Technical Secondary","Templeton Secondary","King George Secondary"
+    ];
+    function randInt(a,b){ return Math.floor(Math.random()*(b-a+1))+a; }
+    var names = ["Ava","Liam","Noah","Emma","Sophia","Jackson","Mia","Lucas","Ethan","Olivia","Mason","Chloe","Isla","Logan","Aria","Ella"];
+    for(var lvl=0; lvl<=6; lvl++){
+      for(var i=0;i<3;i++){
+        var n = names[(i+lvl)%names.length] + " " + String.fromCharCode(65+i);
+        var school = PRESET_SCHOOLS[(i*3+lvl)%PRESET_SCHOOLS.length];
+        var wrong = randInt(0,3);
+        var right = 10;
+        var time = randInt(140,420);
+        saveScore(n, school, wrong, right, time, randInt(0,12), lvl);
+      }
+    }
+    localStorage.setItem(BB_SEEDED_KEY,'1');
+  }
+
+  function bindHandlers(){
+    startBtn.addEventListener("click", function(){ startBtn.style.display="none"; nextRound(); });
+    submitBtn.addEventListener("click", onSubmit);
+    nextBtn.addEventListener("click", nextRound);
+    playAgainBtn.addEventListener("click", function(){ resetToStart(true); });
+    returnBtn.addEventListener("click", function(){ resetToStart(true); });
+    quizBtn.addEventListener("click", checkQuiz);
+    quizInput.addEventListener("keydown", function(e){ if(e.key==="Enter"){ checkQuiz(); } });
+    exerciseRecallDoneBtn.addEventListener("click", function(){ exerciseRecallDiv.style.display="none"; nextBtn.style.display="inline-block"; });
+    spinBtn.addEventListener("click", spinRoulette);
+    levelSelect.addEventListener("change", function(e){
+      var sel = getLevelConfig(levelSelect.value);
+      levelSelect.value = String(sel.key);
+      if(gameActive){ e.preventDefault(); levelSelect.blur(); }
+    });
+
+    renderTabs("all");
+    renderSeedIfNeeded();
+    renderBillboard("all");
+    // ensure UI initialized so Start always works
+    resetToStart(true);
+  }
+
+  // ---------- Simple tests ----------
+  function runTests(){
+    var out=[]; function ok(name, cond){ out.push((cond?"✅":"❌")+" "+name); if(!cond) console.error("Test failed:", name); }
+
+    ok('getLevelConfig("3").cfg.shapes === 1', getLevelConfig("3").cfg.shapes===1);
+    ok('Level 4 has 2 shapes', getLevelConfig("4").cfg.shapes===2);
+    ok('sanitize invalid level -> 0', getLevelConfig("abc").key===0);
+
+    var before = lsLoad().length;
+    saveScore("Test L4","Lord Byng Secondary",1,10,200,0,4);
+    var after = lsLoad().length; ok('Score saved', after===before+1);
+
+    testOutput.textContent = out.join("\n");
+  }
+
+  if(document.readyState==="loading"){ document.addEventListener("DOMContentLoaded", function(){ bindHandlers(); runTests(); }); } else { bindHandlers(); runTests(); }
+})();
+</script>
+</body>
+</html>
